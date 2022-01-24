@@ -1,0 +1,56 @@
+function sysCall_init() 
+    joint_cam={-1}
+    joints_h={-1,-1,-1,-1}
+    joints_v={-1,-1,-1,-1}
+    
+    for i=1,4,1 do
+        joints_h[i]=sim.getObjectHandle('snake_joint_h'..(i))
+    end
+    joint_cam[1]=sim.getObjectHandle('snake_joint_cam')
+    for i=1,4,1 do
+        joints_v[i]=sim.getObjectHandle('snake_joint_v'..(i))
+    end
+
+    t=0
+    -- 2 sets of control Parameters:
+    speed={5,5}
+    ampitude_h={0,15}
+    ampitude_v={20,15}
+    phase_v={120,0}
+    phase_h={60,0}
+    phase_cam={180,180}
+    --Inputs for the function control (in radians) (also 2 sets)
+    A_H={ampitude_h[1]*math.pi/180,ampitude_h[2]*math.pi/180}
+    A_V={ampitude_v[1]*math.pi/180,ampitude_v[2]*math.pi/180}
+    P_V={phase_v[1]*math.pi/180,phase_v[2]*math.pi/180}
+    P_H={phase_h[1]*math.pi/180,phase_h[2]*math.pi/180}
+    P_C={phase_cam[1]*math.pi/180,phase_cam[2]*math.pi/180}
+    s=0 -- if s=0 we use the first set of parameters, if s=1 we use the second set of parameters
+
+    -- Prepare a floating view with the front camera:
+    frontCam=sim.getObjectHandle('snake_frontCamera')
+    frontView=sim.floatingViewAdd(0.9,0.9,0.2,0.2,0)
+    sim.adjustView(frontView,frontCam,0)
+end
+
+function sysCall_cleanup() 
+    sim.floatingViewRemove(frontView)
+end 
+
+function sysCall_actuation() 
+    t=t+sim.getSimulationTimeStep()
+    
+    if (t>10) then -- Here we do a transition from one movement type to the other movement type (between time=10 and time=11):
+        s=t-10
+        if (s>1) then
+            s=1
+        end
+    end
+    
+    for i=1,4,1 do 
+        sim.setJointTargetPosition(joints_v[i],(A_V[1]*(1-s)+A_V[2]*s)*math.sin(t*(speed[1]*(1-s)+speed[2]*s)+i*(P_V[1]*(1-s)+P_V[2]*s)))
+        sim.setJointTargetPosition(joints_h[i],(A_H[1]*(1-s)+A_H[2]*s)*math.cos(t*(speed[1]*(1-s)+speed[2]*s)+i*(P_H[1]*(1-s)+P_H[2]*s)))
+    end
+    
+    sim.setJointTargetPosition(joint_cam[1],(A_V[1]*(1-s)+A_V[2]*s)/2*math.sin(t*(speed[1]*(1-s)+speed[2]*s)+(P_V[1]*(1-s)+P_V[2]*s)+(P_C[1]*(1-s)+P_C[2]*s)))
+end 
